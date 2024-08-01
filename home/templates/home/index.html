@@ -119,11 +119,6 @@
         <a href="{% url 'create_blog' %}">Create new Blog</a>
     </p>
     {% endfor %}
-    <h1>Requests to join private</h1>
-    {% for permission in permissions %}
-        <ul>
-            <li>name : {{ permission.user_from }}</li>
-            <li>{{ permission.blog }}</li>
-        </ul>
-    {% endfor %}
+    <h1>Requests to Join</h1>
+    
 {% endblock %}

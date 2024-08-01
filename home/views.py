@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.contrib.auth.models import User
-from posts.models import Blog, Member, Request
+from posts.models import Blog, Request, customuser
 from .models import Post
 from datetime import datetime
 from django.contrib.auth import logout
@@ -32,7 +32,7 @@ def index(request):
     user_blogs = []
     recents = []
     q_set = None
-    if request.user not in User.objects.all():
+    if not customuser.objects.filter(id=request.user.id).exists():
         return redirect(reverse("sign_up"))
     elif not request.user.is_authenticated:
         return redirect(reverse("login"))
@@ -57,22 +57,24 @@ def index(request):
             "popular_blogs":popular,
             "q_set": q_set
         })
+
 def blog_content(request, pk):
     if not request.user.is_authenticated:
         return redirect(reverse("login"))
     blog = Blog.objects.get(id = pk)
     if not blog.state:
         print(blog.state)
-        if not Member.objects.filter(user= request.user, blog=blog).exists():
-            print(blog.state)
+        if not customuser.objects.filter(user= request.user, blog=blog).exists():
             messages.error(request, "Can not join Private. Need permissions from creater")
-            cur_member = Member.objects.get(user=request.user)
+            cur_member = request.user
             creator = blog.created_user
-            creator = Member.objects.get(user=creator)
             permission = Request.objects.create(user_from=cur_member, blog=blog, user_to=creator)
             permission.save()
+            creator = customuser.objects.get(user=creator)
+            creator.requests.add(request)
+            creator.save()
             return render(request, "home/index.html",{
-                "permissions": creator.acceptors.all()
+                "permissions": customuser.objects.all()
             })
     if request.method == "POST":
         txt_message = request.POST["message"]
@@ -81,7 +83,7 @@ def blog_content(request, pk):
         post.save()
         blog.post.add(post)
         blog.save()
-        cur_member = Member.objects.get(user=request.user)
+        cur_member = customuser.objects.get(user=request.user)
         cur_member.blog.add(blog)
         cur_member.save()
         if not Recent.objects.filter(recent_blog=blog, user_for=request.user).exists():
